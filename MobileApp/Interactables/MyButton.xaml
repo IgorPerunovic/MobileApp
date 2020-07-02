@@ -1,0 +1,14 @@
+﻿<?xml version="1.0" encoding="UTF-8"?>
+<interactables:Interactable xmlns="http://xamarin.com/schemas/2014/forms" 
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:d="http://xamarin.com/schemas/2014/forms/design"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:interactables="clr-namespace:MobileApp.Interactables"
+             mc:Ignorable="d"
+             x:Class="MobileApp.Interactables.MyButton">
+  <ContentView.Content>
+      <StackLayout x:Name="rootStackLayout">
+          <Label Text="Test my button!" />
+      </StackLayout>
+  </ContentView.Content>
+</interactables:Interactable>
