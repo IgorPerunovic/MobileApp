@@ -1,4 +1,7 @@
-﻿using System;
+﻿using aucobo;
+using MobileApp.Models;
+using Newtonsoft.Json;
+using System;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using System.Text;
@@ -92,20 +95,50 @@ namespace MobileApp.Services
 
         // constants and keys used for saving and getting values
         #region constants
-
+        const string smartwatchKey = "Smart_Watch_Key";
+        const string configurationKey = "Configuration_Key";
         #endregion
 
         // these methods are used as presented to get and save specific values that we use in the app
         #region externally available methods
-        public static void SaveConfig(bool config)
+ 
+
+
+        public static Smartwatch Smartwatch 
+        { 
+            get 
+            {
+                var smartWatchJSON = Settings.getString(smartwatchKey);
+                var result = JsonConvert.DeserializeObject<Smartwatch>(smartWatchJSON);
+                return result;
+            }
+            set 
+            {
+                if (!(value is Smartwatch)) { return; }
+                Settings.saveString(smartwatchKey, JsonConvert.SerializeObject(value));
+            }
+            
+        }
+        
+    
+        public static Configuration Configuration 
         {
-            Settings.saveBool("configuration", config);
+            get
+            {
+                var configurationJson = Settings.getString(configurationKey);
+                var result = JsonConvert.DeserializeObject<Configuration>(configurationJson);
+                return result;
+            }
+            set
+            {
+                if (!(value is Configuration)) { return; }
+                Settings.saveString(configurationKey, JsonConvert.SerializeObject(value));
+            }
         }
 
-        public static bool GetConfig()
-        {
-            return Settings.getBool("configuration");
-        }
+        // todo: implement JWT class
+        //public static JWT OauthToken { get; set; }
+
         #endregion
     }
 }

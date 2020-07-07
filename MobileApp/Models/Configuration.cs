@@ -5,6 +5,7 @@ namespace aucobo
 {
     public class Configuration
     {
+        //maybe not needed? todo: check
         //[JsonProperty("settings")]
         //public List<Setting> Settings { get; set; }
 

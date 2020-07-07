@@ -22,7 +22,7 @@
     </ContentPage.Resources>
 
         <StackLayout BackgroundColor="{StaticResource Accent}" VerticalOptions="FillAndExpand" HorizontalOptions="Fill">
-        <interactables:MyButton  VerticalOptions="FillAndExpand" HorizontalOptions="FillAndExpand" BackgroundColor="Red" TappedCommand="{Binding TestCommand}"/>
+        <interactables:InteractableButton  VerticalOptions="FillAndExpand" HorizontalOptions="FillAndExpand" BackgroundColor="Red" TappedCommand="{Binding TestCommand}"/>
     </StackLayout>
     
 </ContentPage>

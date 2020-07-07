@@ -17,25 +17,25 @@ namespace MobileApp.Models
         [JsonProperty("configurationId")]
         public string ConfigurationId { get; set; }
 
-        //public static Device FromWalkieTalkieMessage(WalkieTalkieMessage message) => new Device()
-        //{
-        //    ID = message.SenderDeviceId,
-        //    Owner = new User() { Name = message.SenderOwnerName }
-        //};
+        public static Device FromWalkieTalkieMessage(WalkieTalkieMessage message) => new Device()
+        {
+            ID = message.SenderDeviceId,
+            Owner = new User() { Name = message.SenderOwnerName }
+        };
 
         //TODO: implement this as needed
-        //public static Device FromPictureMessage(PictureMessage message) => new Device()
-        //{
-        //    ID = message.SenderDeviceId,
-        //    Owner = new User() { Name = message.SenderOwnerName }
-        //};
+        public static Device FromPictureMessage(PictureMessage message) => new Device()
+        {
+            ID = message.SenderDeviceId,
+            Owner = new User() { Name = message.SenderOwnerName }
+        };
     }
 
     public class Smartwatch : Device
     {
         //TODO: implement this model to represent button data
-        //[JsonProperty("buttons")]
-        //public List<AucoboButton> Buttons { get; set; }
+        [JsonProperty("buttons")]
+        public List<AucoboButtonModel> Buttons { get; set; }
 
         public Smartwatch GetCopy() => JsonConvert.DeserializeObject<Smartwatch>(JsonConvert.SerializeObject(this));
     }

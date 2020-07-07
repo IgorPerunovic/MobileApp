@@ -7,9 +7,9 @@ using Xamarin.Forms.Xaml;
 namespace MobileApp.Interactables
 {
     [XamlCompilation(XamlCompilationOptions.Compile)]
-    public partial class MyButton : Interactable
+    public partial class InteractableButton : Interactable
     {
-        public MyButton()
+        public InteractableButton()
         {
             InitializeComponent();
         }
@@ -17,13 +17,13 @@ namespace MobileApp.Interactables
         public static readonly BindableProperty TappedCommandProperty = BindableProperty.Create(
             "TappedCommandProperty",
             typeof(ICommand),
-            typeof(MyButton),
+            typeof(InteractableButton),
             propertyChanged: (b,o,n)=> {
-                ((MyButton)b).rootStackLayout.GestureRecognizers.Clear();
+                ((InteractableButton)b).rootStackLayout.GestureRecognizers.Clear();
                
                 var tapGestureRecognizer = new TapGestureRecognizer();
                 tapGestureRecognizer.Command = ((Command)n);
-                ((MyButton)b).rootStackLayout.GestureRecognizers.Add(tapGestureRecognizer);
+                ((InteractableButton)b).rootStackLayout.GestureRecognizers.Add(tapGestureRecognizer);
 
             });
 

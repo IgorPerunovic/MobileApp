@@ -113,6 +113,7 @@ namespace MobileApp.Services
         }
 
 
+        public static long CurrentTimeMillis => DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
 
     }
 }

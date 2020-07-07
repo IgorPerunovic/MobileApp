@@ -23,13 +23,6 @@ namespace MobileApp
         {
             Debug.WriteLine("app started");
             //var config = await Helper.TryGetNewConfiguration(Constants.QR);
-            var config = true;
-
-            Settings.SaveConfig(config);
-            var configAgain = Settings.GetConfig();
-
-            Debug.WriteLine("configuration is: " + configAgain);
-
         }
 
         protected override void OnSleep()

@@ -5,7 +5,7 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:interactables="clr-namespace:MobileApp.Interactables"
              mc:Ignorable="d"
-             x:Class="MobileApp.Interactables.MyButton">
+             x:Class="MobileApp.Interactables.InteractableButton">
   <ContentView.Content>
       <StackLayout x:Name="rootStackLayout">
           <Label Text="Test my button!" />
