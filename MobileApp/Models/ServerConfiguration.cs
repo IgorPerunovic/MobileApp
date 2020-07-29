@@ -3,7 +3,7 @@ using System.Runtime.Serialization;
 
 namespace aucobo
 {
-    public class Configuration
+    public class ServerConfiguration
     {
         //maybe not needed? todo: check
         //[JsonProperty("settings")]

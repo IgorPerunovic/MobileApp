@@ -4,7 +4,8 @@ using System.Text;
 
 namespace MobileApp.Services
 {
-    class InteractableFactory
+    public static class InteractableFactory
     {
+
     }
 }

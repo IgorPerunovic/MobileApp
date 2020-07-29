@@ -10,6 +10,9 @@ using System.Threading;
 using System.Threading.Tasks;
 using MobileApp.Services;
 using MobileApp.Models;
+using MobileApp.Models;
+using Xamarin.Essentials;
+using MobileApp.Factories;
 
 #if WINDOWS_UWP
 using Windows.System.Power;
@@ -32,22 +35,22 @@ namespace aucobo
         static IModel rabbitChannel = null;
 
         private static bool isConnected;
-        public static bool IsConnected
-        {
-            get => isConnected;
-            private set
-            {
-                isConnected = value;
-                // todo: check if we need this in Xamarin.Forms
-//#if WINDOWS_UWP
-//                AppServiceBridge.SignalRabbitConnection();
-//#endif
-            }
-        }
+        public static bool IsConnected => rabbitConnection?.IsOpen ?? false; //(rabbitConnection != null) && rabbitConnection.IsOpen;
+//        {
+//            get => isConnected;
+//            private set
+//            {
+//                isConnected = value;
+//                // todo: check if we need this in Xamarin.Forms
+////#if WINDOWS_UWP
+////                AppServiceBridge.SignalRabbitConnection();
+////#endif
+//            }
+//        }
 
         public static void StopService() => rabbitConnection?.Abort(TimeSpan.FromSeconds(2)); // Abort() is like Close() but ignoring possible errors/exceptions
 
-        public static bool RestartService(bool testConnection = false)
+        public static bool RestartService(bool testConnection = false, bool checkForBatteryState = true)
         {
             // todo: check if we need this in Xamarin.Forms
 
@@ -55,39 +58,49 @@ namespace aucobo
 //            if (Helper.IsForegroundApp && !testConnection) { return false; }
 //#endif
             StopService();
-            return StartService(testConnection);
+            return StartService(testConnection, checkForBatteryState);
         }
 
-        public static bool StartService(bool testConnection = false)
+        public static bool StartService(bool testConnection = false, bool checkForBatteryState = true)
         {
-            if (IsConnected) { return true; }
-#if WINDOWS_UWP
-            if (!testConnection && PowerManager.BatteryStatus != BatteryStatus.Discharging) { return false; }
-#elif __ANDROID__
-            if (!testConnection && Battery.State != BatteryState.Discharging) { return false; }
-#endif
-            if (Settings.Smartwatch?.ID == null || !connectSema.Wait(0)) { return false; }
+            connectSema.Wait();  //semaphore to block entry so we don't open multiple connections accidentally
+            // ALWAYS RELEASE SEMAPHORE BEFORE EXITING CODE!!
+            if (rabbitConnection.IsOpen) 
+            {
+                connectSema.Release(); 
+                return true; 
+            }
+            
+            // todo: check if battery state is a good condition for this?
+            if ((!testConnection && checkForBatteryState && Battery.State != BatteryState.Discharging) || Settings.Smartwatch?.ID == null)
+            {
+                connectSema.Release();
+                return false;
+            }
+          
             try
             {
-                if (IsConnected) { return false; } // check "IsConnected" again to avoid race-conditions
                 var queue = Settings.Smartwatch.ID;
                 rabbitConnection = new ConnectionFactory()
                 {
                     
                     Ssl = new SslOption()
                     {
-                        Enabled = Settings.Configuration.RabbitPort == "5673",
+                        Enabled = Settings.Configuration.RabbitPort == "5673", //todo: check if condition proper, move to constant
                         ServerName = Settings.Configuration.AucoboIP,
                     },
                     HostName = Settings.Configuration.RabbitIP,
                     Port = int.Parse(Settings.Configuration.RabbitPort),
                     UserName = Settings.Configuration.RabbitUserName,
                     Password = Settings.Configuration.RabbitPassword,
-                    RequestedConnectionTimeout = TimeSpan.FromSeconds(3),
+                    RequestedConnectionTimeout = TimeSpan.FromSeconds(3), //todo: check why 3 seconds?
                     AutomaticRecoveryEnabled = false, // we handle that by ourself, as it is less error-prone
-#if __ANDROID__
-                    RequestedHeartbeat = TimeSpan.FromSeconds(10),
-#endif
+                    RequestedHeartbeat = TimeSpan.FromSeconds(10)
+                  
+                    //todo: check if only on Android?
+//#if __ANDROID__
+//                    RequestedHeartbeat = TimeSpan.FromSeconds(10),
+//#endif
                 }.CreateConnection(queue);
 
                 rabbitConnection.ConnectionShutdown += (s, e) =>
@@ -97,24 +110,32 @@ namespace aucobo
                         // todo: implement as needed
                     //    Logger.Warn("Rabbit connection shut down: " + e.Cause + ", " + e.ReplyText + ", " + e.ReplyCode); 
                     }
-                    if (e.ReplyCode != 200) // 200 = RabbitMQ.Client.Framing.Constants.ReplySuccess
-                    {
-                        Task.Run(async () =>
-                        {
-                            await Task.Delay(1000); // todo: check why? what happens if this doesn't happen like this?
-                            StartService();
-                        });
-                    }
                     rabbitConnection = null;
                     rabbitChannel = null;
-                    IsConnected = false;
+                    if (e.ReplyCode != RabbitMQ.Client.Constants.ReplySuccess) // 200
+                    {
+                            StartService();
+                    }
+
+                    // todo: clean up if above code works!
+                    // original:
+                    //if (e.ReplyCode != RabbitMQ.Client.Constants.ReplySuccess) // 200
+                    //{
+                    //    Task.Run(async () =>
+                    //    {
+                    //        await Task.Delay(1000); // todo: check why? what happens if this doesn't happen like this?
+                    //        StartService();
+                    //    });
+                    //}
+                    //rabbitConnection = null;
+                    //rabbitChannel = null;
                 };
                 rabbitChannel = rabbitConnection.CreateModel();
 
                 var consumer = new EventingBasicConsumer(rabbitChannel);
                 if (!testConnection) {
                     // todo: check this and implement event
-                    //consumer.Received += Consumer_Received; 
+                    consumer.Received += (s, e) => MessageHandlerFactory.GetMessageHandler.HandleRabbitMessage(s, e);  //Consumer_Received; 
                 }
                 var consumerTag = string.Empty;
                 // todo: figure out the logic to send appropriate tag (just check values)
@@ -143,7 +164,6 @@ namespace aucobo
 
                 // todo: implement if needed
                 //Logger.Debug("RabbitMQ connect success");
-                IsConnected = true;
             }
             catch (Exception ex)
             {
@@ -168,8 +188,8 @@ namespace aucobo
                     props.DeliveryMode = 1; // non-persistent
                     props.Headers = new Dictionary<string, object>()
                     {
-                        { "senderId", ""/*Settings.Smartwatch.Owner.ID */},
-                        { "deviceId", ""/*Settings.Smartwatch.ID*/ },
+                        { "senderId", Settings.Smartwatch.Owner.ID },
+                        { "deviceId", Settings.Smartwatch.ID },
                     };
 
                     //todo: implement if needed
@@ -209,8 +229,8 @@ namespace aucobo
                     props.DeliveryMode = 1; // non-persistent
                     props.Headers = new Dictionary<string, object>()
                             {
-                                { "senderDeviceId", ""/*Settings.Smartwatch.ID*/ },
-                                { "senderOwnerName", ""/*Settings.Smartwatch.Owner.FullName*/ },
+                                { "senderDeviceId", Settings.Smartwatch.ID },
+                                { "senderOwnerName", Settings.Smartwatch.Owner.FullName },
                                 { "aucoboClass", ""/*Constants.WALKIE_TALKIE_BUTTON_ID*/ },
                             };
 
@@ -253,8 +273,8 @@ namespace aucobo
                     props.DeliveryMode = 1; // non-persistent
                     props.Headers = new Dictionary<string, object>()
                             {
-                                { "senderDeviceId", "" /*Settings.Smartwatch.ID*/ },
-                                { "senderOwnerName", "" /*Settings.Smartwatch.Owner.FullName*/ },
+                                { "senderDeviceId", Settings.Smartwatch.ID },
+                                { "senderOwnerName", Settings.Smartwatch.Owner.FullName },
                                 { "aucoboClass", "" /*Constants.PICTURE_COMMUNICATION_BUTTON_ID*/ },
                             };
 
@@ -335,289 +355,220 @@ namespace aucobo
 
 
 
-////                async static void Consumer_Received(object sender, BasicDeliverEventArgs e)
-////{
-////    try
-////    {
-////        var headers = e.BasicProperties.Headers.Where(x => x.Value is byte[]).ToDictionary(x => x.Key, y => Encoding.UTF8.GetString(y.Value as byte[]));
-////        if (headers.TryGetValue("aucoboClass", out var aucoboClass))
-////        {
-////            if (aucoboClass == "" /*Constants.WALKIE_TALKIE_BUTTON_ID*/ && headers.TryGetValue("senderDeviceId", out var senderDeviceId) && headers.TryGetValue("senderOwnerName", out var senderOwnerName))
-////            {
-////#if __ANDROID__
-////                            Helper.RunOnUiThread(() => MainActivity.WalkieTalkieMessages.Add(WalkieTalkieMessage.FromRabbitMessage(e.Body.ToArray(), senderDeviceId, senderOwnerName)));
-////#elif WINDOWS_UWP
-////                                var status = await Helper.GetDoNotDisturbStatusAsync();
-////                                if (status.DoNotDisturb) { return; }
-////                                if (Helper.IsDisplayOff()) { Helper.WakeupApp(); }
-////                                await AppServiceBridge.SendData(new ValueSet()
-////                                {
-////                                    [AppServiceConstants.WalkieTalkieData] = e.Body.ToArray(),
-////                                    [AppServiceConstants.WalkieTalkieSenderDeviceId] = senderDeviceId,
-////                                    [AppServiceConstants.WalkieTalkieSenderOwnerName] = senderOwnerName,
-////                                });
-////#elif __IOS__
-////                            // TODO
-////#endif
-////                //Helper.Vibrate();
-////                return;
-////            }
-////            else if (aucoboClass == Constants.PICTURE_COMMUNICATION_BUTTON_ID)
-////            {
-////                headers.TryGetValue("senderDeviceId", out var pictureSenderDeviceId);
-////                headers.TryGetValue("senderOwnerName", out var pictureSenderOwnerName);
-
-////#if __ANDROID__
-////                                Helper.RunOnUiThread(() => MainActivity.PictureMessages.Add(PictureMessage.FromRabbitMessage(e.Body.ToArray(), pictureSenderDeviceId, pictureSenderOwnerName)));
-////#elif WINDOWS_UWP
-////                                var status = await Helper.GetDoNotDisturbStatusAsync();
-////                                if (status.DoNotDisturb) { return; }
-////                                if (Helper.IsDisplayOff()) { Helper.WakeupApp(); }
-////                                await AppServiceBridge.SendData(new ValueSet()
-////                                {
-////                                    [AppServiceConstants.PictureData] = e.Body.ToArray(),
-////                                    [AppServiceConstants.PictureSenderDeviceId] = pictureSenderDeviceId,
-////                                    [AppServiceConstants.PictureSenderOwnerName] = pictureSenderOwnerName,
-////                                });
-////#elif __IOS__
-////                            // TODO
-////#endif
-////                Helper.Vibrate();
-////                return;
-////            }
-////        }
-
-
-////        var msg = new RabbitMessage()
-////        {
-////            ID = Guid.NewGuid().ToString(),
-////            Message = Encoding.UTF8.GetString(e.Body.ToArray()),
-////            Headers = JsonConvert.SerializeObject(headers)
-////        };
-
-////        var processed = true;
-////        // handle exception while processing as "successul" processing to prevent repeated unsuccessful processing
-////        try { processed = await ProcessRabbitMessage(msg); } catch (Exception ex) { Logger.Error("ProcessRabbitMessage: " + ex); }
-
-////        if (!processed)
-////        {
-////            DatabaseHelper.PushRealmItem(msg);
-////            pendingRabbitMessages = true;
-////        }
-////        rabbitChannel.BasicAck(e.DeliveryTag, false);
-////    }
-////    catch (Exception ex) { Logger.Error("Consumer_Received: " + ex); }
-////}
-
-
-
-
-
-
-//todo: Implement this properly when you manage login and getting messages
-
-
-/*
-async static Task<bool> ProcessRabbitMessage(RabbitMessage msg)
-{
-    var headers = msg.GetHeadersDict();
-    Helper.LogDebug("Received message: " + string.Join(Environment.NewLine, headers.Select(kvp => kvp.Key + ": " + kvp.Value.ToString()))
-        + Environment.NewLine + "message: " + msg.Message + Environment.NewLine);
-    if (!headers.ContainsKey("aucoboClass")) { return true; }
-    //Helper.LogDebug("Received message of type " + headers["aucoboClass"] + ": " + msg.Message);
-    switch (headers["aucoboClass"])
-    {
-        case "ToDo":
-            await toDoSema.WaitAsync();
-            try
-            {
-                var toDo = JsonConvert.DeserializeObject<ToDo>(msg.Message);
-                if (headers.TryGetValue("event", out var ev)) { toDo.RabbitEventHeader = ev; }
-
-                if (ev != null && ev != "ASSIGNED" && ev != "CREATED" && ev != "ACCEPTED" && ev != "DONE") { return true; } // we dont care about other events
-                if (ev != null && ev != "ASSIGNED" && toDo.AssignedToCurrentUser) { return true; } // the current user initiated this update -> ignore
-
-#if WINDOWS_UWP
-                                var status = await Helper.GetDoNotDisturbStatusAsync();
-                                if (toDo.Assignee == null && status.BlockingTodoId != null && status.BlockingTodoId != toDo.ID)
-                                {
-                                    await BackendHelper.DeclineTodoAsync(toDo, true, false);
-                                    toDo.RabbitEventHeader = "DECLINED_BECAUSE_BLOCKED";
-                                }
-
-                                headers["aucoboClass"] = "ToDoProcessed";
-                                toDo.SerializeRabbitEventHeader = true;
-                                msg.Headers = JsonConvert.SerializeObject(headers);
-                                msg.Message = JsonConvert.SerializeObject(toDo);
-
-                                if (status.DoNotDisturb && status.BlockingTodoId != toDo.ID) { return false; }
-                                var displayOff1 = Helper.IsDisplayOff();
-                                if (Settings.NotificationDisplayOn || !displayOff1)
-                                {
-                                    if (Settings.NotificationDisplayOn && displayOff1) { Helper.WakeupApp(); }
-                                    return await AppServiceBridge.SendData(new ValueSet() { [AppServiceConstants.ToDo] = JsonConvert.SerializeObject(toDo) }) != null;
-                                }
-                                else
-                                {
-                                    Helper.Vibrate(toDo);
-                                    return false;
-                                }
-#else
-                if (toDo.Assignee == null && DatabaseHelper.Current.LocalTodos.Any(x => x != toDo && x.Blocking && !x.InteractionPending))
-                {
-                    await BackendHelper.DeclineTodoAsync(toDo, true, false);
-                    toDo.RabbitEventHeader = "DECLINED_BECAUSE_BLOCKED";
-                }
-                Helper.HandleTodo(toDo);
-                return true;
-#endif
-            }
-            finally { toDoSema.Release(); }
-        case "PushNotification":
-#if WINDOWS_UWP
-                            if ((await Helper.GetDoNotDisturbStatusAsync()).DoNotDisturb) { return false; }
-                            var displayOff2 = Helper.IsDisplayOff();
-                            if (Settings.NotificationDisplayOn || !displayOff2)
-                            {
-                                if (Settings.NotificationDisplayOn && displayOff2) { Helper.WakeupApp(); }
-                                return await AppServiceBridge.SendData(new ValueSet() { [AppServiceConstants.PushNotification] = msg.Message }) != null;
-                            }
-                            else
-                            {
-                                var notification = JsonConvert.DeserializeObject<PushNotification>(msg.Message);
-                                Helper.Vibrate(notification);
-                                return false;
-                            }
-#else
-            //check blocking todo
-            if (DatabaseHelper.Current.LocalTodos.Any(x => x.Blocking && !x.InteractionPending)) { return false; }
-            Helper.ShowNotification(JsonConvert.DeserializeObject<PushNotification>(msg.Message));
-            return true;
-#endif
-        case "Buttons":
-#if WINDOWS_UWP
-                            AppServiceBridge.SendData(new ValueSet() { [AppServiceConstants.Buttons] = msg.Message }).Forget();
-#else
-            Settings.UpdateButtons(JsonConvert.DeserializeObject<List<AucoboButton>>(msg.Message));
-#endif
-            return true; // even on failure, fire and forget
-        case "User":
-#if WINDOWS_UWP
-                            var userSentResult = await AppServiceBridge.SendData(new ValueSet() { [AppServiceConstants.NewUser] = msg.Message });
-                            if (userSentResult != null) { Settings.UpdateOwner(JsonConvert.DeserializeObject<User>(msg.Message)); }
-                            return userSentResult != null;
-#else
-            Settings.UpdateOwner(JsonConvert.DeserializeObject<User>(msg.Message));
-            return true;
-#endif
-        case "Configuration":
-            var newConfig = JsonConvert.DeserializeObject<Configuration>(msg.Message);
-            if (Settings.Configuration == null || JsonConvert.SerializeObject(newConfig) == JsonConvert.SerializeObject(Settings.Configuration)) { return true; }
-            Task.Run(async () => // offload in new task so rabbit message can be immediately ack'ed
-            {
-                await Task.Delay(1000); // give some time to ack rabbit message
-                        var success = await Helper.TrySetNewWatch(SmartwatchDto.Create(Settings.Smartwatch, newConfig));
-                if (success) { Task.Run(() => RestartService()).Forget(); }
-            }).Forget();
-            return true;
-        case "Interaction":
-            var interaction = JsonConvert.DeserializeObject<Interaction>(msg.Message);
-            if (headers.TryGetValue("event", out var ev2)) { interaction.RabbitEventHeader = ev2; }
-#if WINDOWS_UWP
-                            if ((await Helper.GetDoNotDisturbStatusAsync()).DoNotDisturb) { return false; }
-                            var displayOff3 = Helper.IsDisplayOff();
-                            if (Settings.NotificationDisplayOn || !displayOff3)
-                            {
-                                if (Settings.NotificationDisplayOn && displayOff3) { Helper.WakeupApp(); }
-                                interaction.SerializeRabbitEventHeader = true;
-                                return await AppServiceBridge.SendData(new ValueSet() { [AppServiceConstants.Interaction] = JsonConvert.SerializeObject(interaction) }) != null;
-                            }
-                            else
-                            {
-                                Helper.Vibrate();
-                                return false;
-                            }
-#else
-            Helper.HandleInteraction(interaction);
-            return true;
-#endif
-        case "Tabs":
-#if WINDOWS_UWP
-                            AppServiceBridge.SendData(new ValueSet() { [AppServiceConstants.Tabs] = msg.Message }).Forget();
-#elif __ANDROID__
-                            Settings.Tabs = JsonConvert.DeserializeObject<List<string>>(msg.Message);
-                            Application.Context.StartActivity(new Intent(Application.Context, typeof(MainActivity))
-                                .SetFlags(ActivityFlags.ClearTask | ActivityFlags.NewTask));
-#endif
-            return true;
-        case "Scandit":
-#if WINDOWS_UWP
-                            AppServiceBridge.SendData(new ValueSet() { [AppServiceConstants.ScanditLicense] = msg.Message }).Forget();
-#elif __ANDROID__
-                            Settings.ScanditLicense = JsonConvert.DeserializeObject<ScanningLicenseKey>(msg.Message).License;
-                            Logger.Info((Settings.ScanditLicense == null ? "removed" : "added") + " Scandit license key");
-#endif
-            return true;
-        case "Honeywell":
-#if WINDOWS_UWP
-                            AppServiceBridge.SendData(new ValueSet() { [AppServiceConstants.HoneywellLicense] = msg.Message }).Forget();
-#elif __ANDROID__
-                            Settings.HoneywellLicense = JsonConvert.DeserializeObject<ScanningLicenseKey>(msg.Message).License;
-                            Logger.Info((Settings.HoneywellLicense == null ? "removed" : "added") + " Honeywell license key");
-#endif
-            return true;
-        default:
-            Logger.Warn("Unknown Rabbit Message Class \"" + headers["aucoboClass"] + "\"");
-            //throw new Exception("Unknown Rabbit Message Class \"" + headers["aucoboClass"] + "\"");
-            return true; // ack message so it doesn't bother us any more
-    }
-}
-*/
-
-
-    /*
-public static Task<bool> SendInteractionResult(Interaction interaction, double result)
-    => SendInteractionResult(interaction, result.ToString("F" + interaction.Properties["comma"], CultureInfo.InvariantCulture));
-    */
-
-     /*   public static async Task<bool> SendInteractionResult(Interaction interaction, string result)
+        async static void Consumer_Received(object sender, BasicDeliverEventArgs e)
         {
-            if (interaction.Type == Interaction.TYPE_PHOTO && result == Constants.MEDIA_SEND_PENDING)
-            {
-                var media = DatabaseHelper.GetMedia(interaction.ID);
-                try { result = await BackendHelper.SendMediaAsync(media); }
-                catch (Exception e)
-                {
-                    Logger.Error("SendMediaAsync: " + e);
-                    Interaction.OnInteractionFinished(false);
-                    return false;
-                }
-            }
-
-            interaction.Output = result;
-            interaction.Initiator ??= Settings.Smartwatch?.Owner;
-            interaction.MetaTags[interaction.Key] = interaction.Output;
-            interaction.PreviousInteractions ??= new Dictionary<string, PreviousInteraction>();
-            interaction.PreviousInteractions[interaction.ID] = new PreviousInteraction()
-            {
-                Step = interaction.PreviousInteractions.Count + 1,
-                Key = interaction.Key,
-                Output = interaction.Output
-            };
-
-#if WINDOWS_UWP
-                    var success = await Helper.SendRabbitMessage("interaction.output", interaction.InteractionSet + "." + interaction.ID, interaction);
-#else
-            await Task.CompletedTask;
-            var success = SendMessage("interaction.output", interaction.InteractionSet + "." + interaction.ID, JsonConvert.SerializeObject(interaction));
-#endif
-
-            Helper.ShowToast(Helper.GetString(success ? "InteractionResultSendingSuccess" : "InteractionResultSendingFailure"));
-            if (success) { DatabaseHelper.Current.RemoveInteraction(interaction); }
-            else { DatabaseHelper.Current.SaveInteraction(interaction, false); }
-            Interaction.OnInteractionFinished(false);
-            return success;
+            MessageHandlerFactory.GetMessageHandler.HandleRabbitMessage(sender,e);
         }
-    */
+
+
+
+
+
+
+        //todo: Implement this properly when you manage login and getting messages
+
+
+        /*
+        async static Task<bool> ProcessRabbitMessage(RabbitMessage msg)
+        {
+            var headers = msg.GetHeadersDict();
+            Helper.LogDebug("Received message: " + string.Join(Environment.NewLine, headers.Select(kvp => kvp.Key + ": " + kvp.Value.ToString()))
+                + Environment.NewLine + "message: " + msg.Message + Environment.NewLine);
+            if (!headers.ContainsKey("aucoboClass")) { return true; }
+            //Helper.LogDebug("Received message of type " + headers["aucoboClass"] + ": " + msg.Message);
+            switch (headers["aucoboClass"])
+            {
+                case "ToDo":
+                    await toDoSema.WaitAsync();
+                    try
+                    {
+                        var toDo = JsonConvert.DeserializeObject<ToDo>(msg.Message);
+                        if (headers.TryGetValue("event", out var ev)) { toDo.RabbitEventHeader = ev; }
+
+                        if (ev != null && ev != "ASSIGNED" && ev != "CREATED" && ev != "ACCEPTED" && ev != "DONE") { return true; } // we dont care about other events
+                        if (ev != null && ev != "ASSIGNED" && toDo.AssignedToCurrentUser) { return true; } // the current user initiated this update -> ignore
+
+        #if WINDOWS_UWP
+                                        var status = await Helper.GetDoNotDisturbStatusAsync();
+                                        if (toDo.Assignee == null && status.BlockingTodoId != null && status.BlockingTodoId != toDo.ID)
+                                        {
+                                            await BackendHelper.DeclineTodoAsync(toDo, true, false);
+                                            toDo.RabbitEventHeader = "DECLINED_BECAUSE_BLOCKED";
+                                        }
+
+                                        headers["aucoboClass"] = "ToDoProcessed";
+                                        toDo.SerializeRabbitEventHeader = true;
+                                        msg.Headers = JsonConvert.SerializeObject(headers);
+                                        msg.Message = JsonConvert.SerializeObject(toDo);
+
+                                        if (status.DoNotDisturb && status.BlockingTodoId != toDo.ID) { return false; }
+                                        var displayOff1 = Helper.IsDisplayOff();
+                                        if (Settings.NotificationDisplayOn || !displayOff1)
+                                        {
+                                            if (Settings.NotificationDisplayOn && displayOff1) { Helper.WakeupApp(); }
+                                            return await AppServiceBridge.SendData(new ValueSet() { [AppServiceConstants.ToDo] = JsonConvert.SerializeObject(toDo) }) != null;
+                                        }
+                                        else
+                                        {
+                                            Helper.Vibrate(toDo);
+                                            return false;
+                                        }
+        #else
+                        if (toDo.Assignee == null && DatabaseHelper.Current.LocalTodos.Any(x => x != toDo && x.Blocking && !x.InteractionPending))
+                        {
+                            await BackendHelper.DeclineTodoAsync(toDo, true, false);
+                            toDo.RabbitEventHeader = "DECLINED_BECAUSE_BLOCKED";
+                        }
+                        Helper.HandleTodo(toDo);
+                        return true;
+        #endif
+                    }
+                    finally { toDoSema.Release(); }
+                case "PushNotification":
+        #if WINDOWS_UWP
+                                    if ((await Helper.GetDoNotDisturbStatusAsync()).DoNotDisturb) { return false; }
+                                    var displayOff2 = Helper.IsDisplayOff();
+                                    if (Settings.NotificationDisplayOn || !displayOff2)
+                                    {
+                                        if (Settings.NotificationDisplayOn && displayOff2) { Helper.WakeupApp(); }
+                                        return await AppServiceBridge.SendData(new ValueSet() { [AppServiceConstants.PushNotification] = msg.Message }) != null;
+                                    }
+                                    else
+                                    {
+                                        var notification = JsonConvert.DeserializeObject<PushNotification>(msg.Message);
+                                        Helper.Vibrate(notification);
+                                        return false;
+                                    }
+        #else
+                    //check blocking todo
+                    if (DatabaseHelper.Current.LocalTodos.Any(x => x.Blocking && !x.InteractionPending)) { return false; }
+                    Helper.ShowNotification(JsonConvert.DeserializeObject<PushNotification>(msg.Message));
+                    return true;
+        #endif
+                case "Buttons":
+        #if WINDOWS_UWP
+                                    AppServiceBridge.SendData(new ValueSet() { [AppServiceConstants.Buttons] = msg.Message }).Forget();
+        #else
+                    Settings.UpdateButtons(JsonConvert.DeserializeObject<List<AucoboButton>>(msg.Message));
+        #endif
+                    return true; // even on failure, fire and forget
+                case "User":
+        #if WINDOWS_UWP
+                                    var userSentResult = await AppServiceBridge.SendData(new ValueSet() { [AppServiceConstants.NewUser] = msg.Message });
+                                    if (userSentResult != null) { Settings.UpdateOwner(JsonConvert.DeserializeObject<User>(msg.Message)); }
+                                    return userSentResult != null;
+        #else
+                    Settings.UpdateOwner(JsonConvert.DeserializeObject<User>(msg.Message));
+                    return true;
+        #endif
+                case "Configuration":
+                    var newConfig = JsonConvert.DeserializeObject<Configuration>(msg.Message);
+                    if (Settings.Configuration == null || JsonConvert.SerializeObject(newConfig) == JsonConvert.SerializeObject(Settings.Configuration)) { return true; }
+                    Task.Run(async () => // offload in new task so rabbit message can be immediately ack'ed
+                    {
+                        await Task.Delay(1000); // give some time to ack rabbit message
+                                var success = await Helper.TrySetNewWatch(SmartwatchDto.Create(Settings.Smartwatch, newConfig));
+                        if (success) { Task.Run(() => RestartService()).Forget(); }
+                    }).Forget();
+                    return true;
+                case "Interaction":
+                    var interaction = JsonConvert.DeserializeObject<Interaction>(msg.Message);
+                    if (headers.TryGetValue("event", out var ev2)) { interaction.RabbitEventHeader = ev2; }
+        #if WINDOWS_UWP
+                                    if ((await Helper.GetDoNotDisturbStatusAsync()).DoNotDisturb) { return false; }
+                                    var displayOff3 = Helper.IsDisplayOff();
+                                    if (Settings.NotificationDisplayOn || !displayOff3)
+                                    {
+                                        if (Settings.NotificationDisplayOn && displayOff3) { Helper.WakeupApp(); }
+                                        interaction.SerializeRabbitEventHeader = true;
+                                        return await AppServiceBridge.SendData(new ValueSet() { [AppServiceConstants.Interaction] = JsonConvert.SerializeObject(interaction) }) != null;
+                                    }
+                                    else
+                                    {
+                                        Helper.Vibrate();
+                                        return false;
+                                    }
+        #else
+                    Helper.HandleInteraction(interaction);
+                    return true;
+        #endif
+                case "Tabs":
+        #if WINDOWS_UWP
+                                    AppServiceBridge.SendData(new ValueSet() { [AppServiceConstants.Tabs] = msg.Message }).Forget();
+        #elif __ANDROID__
+                                    Settings.Tabs = JsonConvert.DeserializeObject<List<string>>(msg.Message);
+                                    Application.Context.StartActivity(new Intent(Application.Context, typeof(MainActivity))
+                                        .SetFlags(ActivityFlags.ClearTask | ActivityFlags.NewTask));
+        #endif
+                    return true;
+                case "Scandit":
+        #if WINDOWS_UWP
+                                    AppServiceBridge.SendData(new ValueSet() { [AppServiceConstants.ScanditLicense] = msg.Message }).Forget();
+        #elif __ANDROID__
+                                    Settings.ScanditLicense = JsonConvert.DeserializeObject<ScanningLicenseKey>(msg.Message).License;
+                                    Logger.Info((Settings.ScanditLicense == null ? "removed" : "added") + " Scandit license key");
+        #endif
+                    return true;
+                case "Honeywell":
+        #if WINDOWS_UWP
+                                    AppServiceBridge.SendData(new ValueSet() { [AppServiceConstants.HoneywellLicense] = msg.Message }).Forget();
+        #elif __ANDROID__
+                                    Settings.HoneywellLicense = JsonConvert.DeserializeObject<ScanningLicenseKey>(msg.Message).License;
+                                    Logger.Info((Settings.HoneywellLicense == null ? "removed" : "added") + " Honeywell license key");
+        #endif
+                    return true;
+                default:
+                    Logger.Warn("Unknown Rabbit Message Class \"" + headers["aucoboClass"] + "\"");
+                    //throw new Exception("Unknown Rabbit Message Class \"" + headers["aucoboClass"] + "\"");
+                    return true; // ack message so it doesn't bother us any more
+            }
+        }
+        */
+
+
+        /*
+    public static Task<bool> SendInteractionResult(Interaction interaction, double result)
+        => SendInteractionResult(interaction, result.ToString("F" + interaction.Properties["comma"], CultureInfo.InvariantCulture));
+        */
+
+        /*   public static async Task<bool> SendInteractionResult(Interaction interaction, string result)
+           {
+               if (interaction.Type == Interaction.TYPE_PHOTO && result == Constants.MEDIA_SEND_PENDING)
+               {
+                   var media = DatabaseHelper.GetMedia(interaction.ID);
+                   try { result = await BackendHelper.SendMediaAsync(media); }
+                   catch (Exception e)
+                   {
+                       Logger.Error("SendMediaAsync: " + e);
+                       Interaction.OnInteractionFinished(false);
+                       return false;
+                   }
+               }
+
+               interaction.Output = result;
+               interaction.Initiator ??= Settings.Smartwatch?.Owner;
+               interaction.MetaTags[interaction.Key] = interaction.Output;
+               interaction.PreviousInteractions ??= new Dictionary<string, PreviousInteraction>();
+               interaction.PreviousInteractions[interaction.ID] = new PreviousInteraction()
+               {
+                   Step = interaction.PreviousInteractions.Count + 1,
+                   Key = interaction.Key,
+                   Output = interaction.Output
+               };
+
+   #if WINDOWS_UWP
+                       var success = await Helper.SendRabbitMessage("interaction.output", interaction.InteractionSet + "." + interaction.ID, interaction);
+   #else
+               await Task.CompletedTask;
+               var success = SendMessage("interaction.output", interaction.InteractionSet + "." + interaction.ID, JsonConvert.SerializeObject(interaction));
+   #endif
+
+               Helper.ShowToast(Helper.GetString(success ? "InteractionResultSendingSuccess" : "InteractionResultSendingFailure"));
+               if (success) { DatabaseHelper.Current.RemoveInteraction(interaction); }
+               else { DatabaseHelper.Current.SaveInteraction(interaction, false); }
+               Interaction.OnInteractionFinished(false);
+               return success;
+           }
+       */
     }
 }

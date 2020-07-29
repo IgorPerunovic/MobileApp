@@ -42,7 +42,7 @@ namespace MobileApp.Models
 
     public class SmartwatchDto : Smartwatch
     {
-        public static SmartwatchDto Create(Smartwatch smartwatch, Configuration config)
+        public static SmartwatchDto Create(Smartwatch smartwatch, ServerConfiguration config)
         {
             var newConfig = JsonConvert.DeserializeObject<SmartwatchDto>(JsonConvert.SerializeObject(smartwatch));
             newConfig.Configuration = config;
@@ -50,7 +50,7 @@ namespace MobileApp.Models
         }
 
         [JsonProperty("configuration")]
-        public Configuration Configuration { get; set; }
+        public ServerConfiguration Configuration { get; set; }
 
         [JsonIgnore]
         public Smartwatch Smartwatch => GetCopy();

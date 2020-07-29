@@ -116,22 +116,23 @@ namespace MobileApp.Services
             {
                 if (!(value is Smartwatch)) { return; }
                 Settings.saveString(smartwatchKey, JsonConvert.SerializeObject(value));
+                
             }
             
         }
         
     
-        public static Configuration Configuration 
+        public static ServerConfiguration Configuration 
         {
             get
             {
                 var configurationJson = Settings.getString(configurationKey);
-                var result = JsonConvert.DeserializeObject<Configuration>(configurationJson);
+                var result = JsonConvert.DeserializeObject<ServerConfiguration>(configurationJson);
                 return result;
             }
             set
             {
-                if (!(value is Configuration)) { return; }
+                if (!(value is ServerConfiguration)) { return; }
                 Settings.saveString(configurationKey, JsonConvert.SerializeObject(value));
             }
         }

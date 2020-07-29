@@ -29,6 +29,7 @@ namespace MobileApp.Services
                 {
                     text = await response.Content.ReadAsStringAsync();
                     var result = await TrySetNewWatch(JsonConvert.DeserializeObject<SmartwatchDto>(text));
+                    
                     return result;
                 }
                 if (response.StatusCode == HttpStatusCode.NotFound)
@@ -60,56 +61,63 @@ namespace MobileApp.Services
         public static async Task<bool> TrySetNewWatch(SmartwatchDto smartwatchDto)
         {
             Debug.WriteLine("ID is: " + smartwatchDto.ID);
-            return false;
-
+            
                 // TODO: decipher this and reuse the code where posible
-//            var oldConfig = Settings.Configuration;
-//            var oldWatch = Settings.Smartwatch;
-//            Settings.SetSmartwatchConfig(smartwatchDto); // Set smartwatch so watch can be registered
-//            ShowToast(GetString("RegisteringSmartwatch"));
-//            if (await BackendHelper.RegisterWatchAsync() is Smartwatch newWatch)
-//            {
-//                ShowToast(GetString("ApplyingSmartwatchConfig"));
-//                Settings.SetSmartwatch(newWatch);
-//                if (RabbitMQService.RestartService(true))
-//                {
-//                    var sentSuccessfully = true;
-//#if WINDOWS_UWP
-//                    sentSuccessfully = await AppServiceBridge.SendData(new ValueSet()
-//                    {
-//                        [AppServiceConstants.Smartwatch] = JsonConvert.SerializeObject(newWatch),
-//                        [AppServiceConstants.Configuration] = JsonConvert.SerializeObject(Settings.Configuration),
-//                    }) != null; // only accept new config if other task receives it too
-//#endif
-//                    if (sentSuccessfully)
-//                    {
-//                        DatabaseHelper.Current.ResetDatabase(false);
-//                        Settings.SetSmartwatchConfig(SmartwatchDto.Create(newWatch, smartwatchDto.Configuration));
-//#if !WINDOWS_UWP
-//                        Task.Run(() => RabbitMQService.StartService()).Forget();
-//#endif
-//                        Logger.Started("New config");
-//                        ShowToast(GetString("ConfigureWatchSuccess"));
-//                        return true;
-//                    }
-//                    else
-//                    {
-//                        ShowToast(GetString("ErrorSendingConfigToBackgroundTask"));
-//                        await Task.Delay(3000); // delay so notification stays visible for at least 3 seconds
-//                    }
-//                }
-//                else
-//                {
-//                    ShowToast(GetString("RabbitConnectionError"));
-//                    await Task.Delay(3000); // delay so notification stays visible for at least 3 seconds
-//                }
-//            }
+            var oldConfig = Settings.Configuration;
+            var oldWatch = Settings.Smartwatch;
+            Settings.Smartwatch = smartwatchDto; // Set smartwatch so watch can be registered
+            Debug.WriteLine("smartwatch: " + Settings.Smartwatch.Owner + " " + Settings.Smartwatch.ID);
+            
+            //todo: check if this is a good place to do this?
+            Settings.Configuration = smartwatchDto.Configuration;
 
-//            Settings.SetSmartwatch(oldWatch);
-//            Settings.SetConfiguration(oldConfig);
-//            Task.Run(() => RabbitMQService.RestartService()).Forget();
-//            ShowToast(GetString("ConfigureWatchNoSuccess"));
-//            return false;
+            return true;
+
+
+            //            ShowToast(GetString("RegisteringSmartwatch"));
+            //            if (await BackendHelper.RegisterWatchAsync() is Smartwatch newWatch)
+            //            {
+            //                ShowToast(GetString("ApplyingSmartwatchConfig"));
+            //                Settings.SetSmartwatch(newWatch);
+            //                if (RabbitMQService.RestartService(true))
+            //                {
+            //                    var sentSuccessfully = true;
+            //#if WINDOWS_UWP
+            //                    sentSuccessfully = await AppServiceBridge.SendData(new ValueSet()
+            //                    {
+            //                        [AppServiceConstants.Smartwatch] = JsonConvert.SerializeObject(newWatch),
+            //                        [AppServiceConstants.Configuration] = JsonConvert.SerializeObject(Settings.Configuration),
+            //                    }) != null; // only accept new config if other task receives it too
+            //#endif
+            //                    if (sentSuccessfully)
+            //                    {
+            //                        DatabaseHelper.Current.ResetDatabase(false);
+            //                        Settings.SetSmartwatchConfig(SmartwatchDto.Create(newWatch, smartwatchDto.Configuration));
+            //#if !WINDOWS_UWP
+            //                        Task.Run(() => RabbitMQService.StartService()).Forget();
+            //#endif
+            //                        Logger.Started("New config");
+            //                        ShowToast(GetString("ConfigureWatchSuccess"));
+            //                        return true;
+            //                    }
+            //                    else
+            //                    {
+            //                        ShowToast(GetString("ErrorSendingConfigToBackgroundTask"));
+            //                        await Task.Delay(3000); // delay so notification stays visible for at least 3 seconds
+            //                    }
+            //                }
+            //                else
+            //                {
+            //                    ShowToast(GetString("RabbitConnectionError"));
+            //                    await Task.Delay(3000); // delay so notification stays visible for at least 3 seconds
+            //                }
+            //            }
+
+            //            Settings.SetSmartwatch(oldWatch);
+            //            Settings.SetConfiguration(oldConfig);
+            //            Task.Run(() => RabbitMQService.RestartService()).Forget();
+            //            ShowToast(GetString("ConfigureWatchNoSuccess"));
+            //            return false;
         }
 
 

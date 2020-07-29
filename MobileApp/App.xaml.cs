@@ -5,6 +5,7 @@ using MobileApp.Services;
 using MobileApp.Views;
 using System.Diagnostics;
 using MobileApp.Models;
+using aucobo;
 
 namespace MobileApp
 {
@@ -22,7 +23,9 @@ namespace MobileApp
         protected async override void OnStart()
         {
             Debug.WriteLine("app started");
-            //var config = await Helper.TryGetNewConfiguration(Constants.QR);
+            
+            var config = await Helper.TryGetNewConfiguration(Constants.QR);
+            RabbitMQService.StartService();
         }
 
         protected override void OnSleep()

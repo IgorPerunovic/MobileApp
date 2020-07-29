@@ -6,7 +6,7 @@ namespace MobileApp.Models
 {
     public static class Constants
     {
-        public static string QR = "http://develop.aucobo-global.de/api/devices/device-qr-config/0bb531a1-856b-4ec3-9bfc-1cac04b5dab6";
+        public static string QR = "https://develop.aucobo-global.de/api/devices/device-qr-config/8d7f4df4-38bb-46ff-8493-7c7dc08a48e9";
 
         public const int RESET_PIN = 3697;
         public const int DEFAULT_INFONOTIFICATION_DURATIONMILLIS = 2000;
@@ -17,5 +17,7 @@ namespace MobileApp.Models
         public const string PICTURE_COMMUNICATION_BUTTON_ID = "picture_btn";
         public const string AUDIORECORDFORMAT = "mm':'ss'.'ff";
 
+        public const string AUCOBO_CLASS_HEADER = "aucoboClass";
+        
     }
 }
