@@ -8,6 +8,7 @@ namespace MobileApp.ViewModels
 {
     public class AboutViewModel : BaseViewModel
     {
+        public string Test { get => "TEST LABEL"; }
         public AboutViewModel()
         {
             Title = "About";

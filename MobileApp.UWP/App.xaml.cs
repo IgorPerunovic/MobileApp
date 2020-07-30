@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Plugin.Toasts.UWP;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -14,13 +15,15 @@ using Windows.UI.Xaml.Data;
 using Windows.UI.Xaml.Input;
 using Windows.UI.Xaml.Media;
 using Windows.UI.Xaml.Navigation;
+using Xamarin.Forms;
+using Frame = Windows.UI.Xaml.Controls.Frame;
 
 namespace MobileApp.UWP
 {
     /// <summary>
     /// Provides application-specific behavior to supplement the default Application class.
     /// </summary>
-    sealed partial class App : Application
+    sealed partial class App : Windows.UI.Xaml.Application
     {
         /// <summary>
         /// Initializes the singleton application object.  This is the first line of authored code
@@ -46,7 +49,7 @@ namespace MobileApp.UWP
             }
 #endif
 
-            Frame rootFrame = Window.Current.Content as Frame;
+            Windows.UI.Xaml.Controls.Frame rootFrame = Window.Current.Content as Windows.UI.Xaml.Controls.Frame;
 
             // Do not repeat app initialization when the Window already has content,
             // just ensure that the window is active
@@ -58,6 +61,9 @@ namespace MobileApp.UWP
                 rootFrame.NavigationFailed += OnNavigationFailed;
 
                 Xamarin.Forms.Forms.Init(e);
+
+                DependencyService.Register<ToastNotification>(); // Register your dependency
+                ToastNotification.Init();
 
                 if (e.PreviousExecutionState == ApplicationExecutionState.Terminated)
                 {

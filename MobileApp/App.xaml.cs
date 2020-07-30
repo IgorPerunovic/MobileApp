@@ -6,6 +6,9 @@ using MobileApp.Views;
 using System.Diagnostics;
 using MobileApp.Models;
 using aucobo;
+using System.Threading.Tasks;
+using Plugin.Toasts;
+using Plugin.Toast;
 
 namespace MobileApp
 {
@@ -23,9 +26,15 @@ namespace MobileApp
         protected async override void OnStart()
         {
             Debug.WriteLine("app started");
-            
-            var config = await Helper.TryGetNewConfiguration(Constants.QR);
-            RabbitMQService.StartService();
+
+            //var config = await Helper.TryGetNewConfiguration(Constants.QR);
+            //RabbitMQService.StartService();
+
+            await Task.Delay(5000);
+            CrossToastPopUp.Current.ShowToastMessage("Message");
+            //var notificator = DependencyService.Get<IToastNotificator>();
+            //var result = await notificator.Notify(new NotificationOptions() { Title = "some title", Description = "My description!", IsClickable = false, AllowTapInNotificationCenter = false });
+            //Debug.WriteLine("result is: " + result.ToString());
         }
 
         protected override void OnSleep()

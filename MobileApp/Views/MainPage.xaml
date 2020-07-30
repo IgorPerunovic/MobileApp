@@ -1,13 +1,20 @@
 ﻿<?xml version="1.0" encoding="utf-8" ?>
-<TabbedPage xmlns="http://xamarin.com/schemas/2014/forms"
+<ContentPage xmlns="http://xamarin.com/schemas/2014/forms"
             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
             xmlns:d="http://xamarin.com/schemas/2014/forms/design"
             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
             mc:Ignorable="d"
             xmlns:views="clr-namespace:MobileApp.Views"
-            x:Class="MobileApp.Views.MainPage">
-
-    <TabbedPage.Children>
+            xmlns:vm="clr-namespace:MobileApp.ViewModels"
+            x:Class="MobileApp.Views.MainPage"
+            x:Name="Root">
+    <ContentPage.Content>
+        <StackLayout Padding="20" BackgroundColor="Green">
+            <Label Text="ASDF TESTING" BackgroundColor="White"/>
+            <Label Text="{Binding Text}" BackgroundColor="Purple"/>
+        </StackLayout>
+    </ContentPage.Content>
+    <!--<TabbedPage.Children>
         <NavigationPage Title="Browse">
             <NavigationPage.Icon>
                 <OnPlatform x:TypeArguments="FileImageSource">
@@ -29,6 +36,6 @@
                 <views:AboutPage />
             </x:Arguments>
         </NavigationPage>
-    </TabbedPage.Children>
+    </TabbedPage.Children>-->
     
-</TabbedPage>
+</ContentPage>

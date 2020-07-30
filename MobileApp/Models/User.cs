@@ -21,7 +21,7 @@ namespace aucobo
         public string Mail { get; set; }
 
         [JsonProperty("metaTags")]
-        public Dictionary<string, string> MetaTags { get; set; }
+        public Dictionary<string, object> MetaTags { get; set; }
 
         [JsonIgnore]
         public string FullName
