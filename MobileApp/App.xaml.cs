@@ -30,8 +30,8 @@ namespace MobileApp
             //var config = await Helper.TryGetNewConfiguration(Constants.QR);
             //RabbitMQService.StartService();
 
-            await Task.Delay(5000);
-            CrossToastPopUp.Current.ShowToastMessage("Message");
+            //await Task.Delay(5000);
+            //CrossToastPopUp.Current.ShowToastMessage("Message");
             //var notificator = DependencyService.Get<IToastNotificator>();
             //var result = await notificator.Notify(new NotificationOptions() { Title = "some title", Description = "My description!", IsClickable = false, AllowTapInNotificationCenter = false });
             //Debug.WriteLine("result is: " + result.ToString());

@@ -1,5 +1,5 @@
 ﻿<?xml version="1.0" encoding="utf-8" ?>
-<ContentPage xmlns="http://xamarin.com/schemas/2014/forms"
+<TabbedPage xmlns="http://xamarin.com/schemas/2014/forms"
             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
             xmlns:d="http://xamarin.com/schemas/2014/forms/design"
             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
@@ -7,13 +7,15 @@
             xmlns:views="clr-namespace:MobileApp.Views"
             xmlns:vm="clr-namespace:MobileApp.ViewModels"
             x:Class="MobileApp.Views.MainPage"
-            x:Name="Root">
-    <ContentPage.Content>
-        <StackLayout Padding="20" BackgroundColor="Green">
-            <Label Text="ASDF TESTING" BackgroundColor="White"/>
-            <Label Text="{Binding Text}" BackgroundColor="Purple"/>
-        </StackLayout>
-    </ContentPage.Content>
+            x:Name="Root"
+            ItemsSource="{Binding Tabs}">
+
+    <TabbedPage.ItemTemplate>
+        <DataTemplate>
+            <ContentPage Title="{Binding Title}" BackgroundColor="{Binding BackgroundColor}" />
+        </DataTemplate>
+    </TabbedPage.ItemTemplate>
+
     <!--<TabbedPage.Children>
         <NavigationPage Title="Browse">
             <NavigationPage.Icon>
@@ -38,4 +40,4 @@
         </NavigationPage>
     </TabbedPage.Children>-->
     
-</ContentPage>
+</TabbedPage>
