@@ -13,8 +13,6 @@ namespace MobileApp.Services
     public class Helper
     {
 
-
-
         public readonly static TimeSpan HttpTimeout = TimeSpan.FromSeconds(5);
         public static HttpClient HttpClient = new HttpClient(new HttpClientHandler()) { Timeout = HttpTimeout };
 
@@ -45,30 +43,30 @@ namespace MobileApp.Services
                 }
             }
             catch(Exception e) { Debug.WriteLine("exception: " + e.Message); }
-            // TODO: handle these errors in a user-friendly way
-//#if __ANDROID__
-//            catch (Java.Net.UnknownHostException) { ShowToast(GetString("HttpError")); }
-//#endif
-//            catch (HttpRequestException) { 
-//                //ShowToast(GetString("HttpError")); 
-//            }
-//            catch (TaskCanceledException) { ShowToast(GetString("TaskCanceledError")); }
-//            catch (Exception) when (!text.StartsWith("https") && !text.StartsWith("http")) { ShowToast(GetString("ConfigScannedWrongCode")); }
-//            catch (Exception ex) { ShowToast(GetString("UnexpectedError") + ": " + ex.Message); }
+            // still_TODO: handle these errors in a user-friendly way
+            //#if __ANDROID__
+            //            catch (Java.Net.UnknownHostException) { ShowToast(GetString("HttpError")); }
+            //#endif
+            //            catch (HttpRequestException) { 
+            //                //ShowToast(GetString("HttpError")); 
+            //            }
+            //            catch (TaskCanceledException) { ShowToast(GetString("TaskCanceledError")); }
+            //            catch (Exception) when (!text.StartsWith("https") && !text.StartsWith("http")) { ShowToast(GetString("ConfigScannedWrongCode")); }
+            //            catch (Exception ex) { ShowToast(GetString("UnexpectedError") + ": " + ex.Message); }
             return false;
         }
 
         public static async Task<bool> TrySetNewWatch(SmartwatchDto smartwatchDto)
         {
             Debug.WriteLine("ID is: " + smartwatchDto.ID);
-            
-                // TODO: decipher this and reuse the code where posible
+
+            // still_TODO: decipher this and reuse the code where posible
             var oldConfig = Settings.Configuration;
             var oldWatch = Settings.Smartwatch;
             Settings.Smartwatch = smartwatchDto; // Set smartwatch so watch can be registered
             Debug.WriteLine("smartwatch: " + Settings.Smartwatch.Owner + " " + Settings.Smartwatch.ID);
-            
-            //todo: check if this is a good place to do this?
+
+            //still_todo: check if this is a good place to do this?
             Settings.Configuration = smartwatchDto.Configuration;
 
             return true;

@@ -41,7 +41,7 @@ namespace aucobo
 //            private set
 //            {
 //                isConnected = value;
-//                // todo: check if we need this in Xamarin.Forms
+//                // still_todo: check if we need this in Xamarin.Forms
 ////#if WINDOWS_UWP
 ////                AppServiceBridge.SignalRabbitConnection();
 ////#endif
@@ -52,11 +52,11 @@ namespace aucobo
 
         public static bool RestartService(bool testConnection = false, bool checkForBatteryState = true)
         {
-            // todo: check if we need this in Xamarin.Forms
+            // still_todo: check if we need this in Xamarin.Forms
 
-//#if WINDOWS_UWP
-//            if (Helper.IsForegroundApp && !testConnection) { return false; }
-//#endif
+            //#if WINDOWS_UWP
+            //            if (Helper.IsForegroundApp && !testConnection) { return false; }
+            //#endif
             StopService();
             return StartService(testConnection, checkForBatteryState);
         }
@@ -65,13 +65,13 @@ namespace aucobo
         {
             connectSema.Wait();  //semaphore to block entry so we don't open multiple connections accidentally
             // ALWAYS RELEASE SEMAPHORE BEFORE EXITING CODE!!
-            if (rabbitConnection.IsOpen) 
+            if (IsConnected) 
             {
                 connectSema.Release(); 
                 return true; 
             }
-            
-            // todo: check if battery state is a good condition for this?
+
+            // still_todo: check if battery state is a good condition for this?
             if ((!testConnection && checkForBatteryState && Battery.State != BatteryState.Discharging) || Settings.Smartwatch?.ID == null)
             {
                 connectSema.Release();
@@ -86,29 +86,29 @@ namespace aucobo
                     
                     Ssl = new SslOption()
                     {
-                        Enabled = Settings.Configuration.RabbitPort == "5673", //todo: check if condition proper, move to constant
+                        Enabled = Settings.Configuration.RabbitPort == "5673", //still_todo: check if condition proper, move to constant
                         ServerName = Settings.Configuration.AucoboIP,
                     },
                     HostName = Settings.Configuration.RabbitIP,
                     Port = int.Parse(Settings.Configuration.RabbitPort),
                     UserName = Settings.Configuration.RabbitUserName,
                     Password = Settings.Configuration.RabbitPassword,
-                    RequestedConnectionTimeout = TimeSpan.FromSeconds(3), //todo: check why 3 seconds?
+                    RequestedConnectionTimeout = TimeSpan.FromSeconds(3), //still_todo: check why 3 seconds?
                     AutomaticRecoveryEnabled = false, // we handle that by ourself, as it is less error-prone
                     RequestedHeartbeat = TimeSpan.FromSeconds(10)
-                  
-                    //todo: check if only on Android?
-//#if __ANDROID__
-//                    RequestedHeartbeat = TimeSpan.FromSeconds(10),
-//#endif
+
+                    //still_todo: check if only on Android?
+                    //#if __ANDROID__
+                    //                    RequestedHeartbeat = TimeSpan.FromSeconds(10),
+                    //#endif
                 }.CreateConnection(queue);
 
                 rabbitConnection.ConnectionShutdown += (s, e) =>
                 {
                     if (!testConnection) 
-                    { 
-                        // todo: implement as needed
-                    //    Logger.Warn("Rabbit connection shut down: " + e.Cause + ", " + e.ReplyText + ", " + e.ReplyCode); 
+                    {
+                        // still_todo: implement as needed
+                        //    Logger.Warn("Rabbit connection shut down: " + e.Cause + ", " + e.ReplyText + ", " + e.ReplyCode); 
                     }
                     rabbitConnection = null;
                     rabbitChannel = null;
@@ -117,13 +117,13 @@ namespace aucobo
                             StartService();
                     }
 
-                    // todo: clean up if above code works!
+                    // still_todo: clean up if above code works!
                     // original:
                     //if (e.ReplyCode != RabbitMQ.Client.Constants.ReplySuccess) // 200
                     //{
                     //    Task.Run(async () =>
                     //    {
-                    //        await Task.Delay(1000); // todo: check why? what happens if this doesn't happen like this?
+                    //        await Task.Delay(1000); // still_todo: check why? what happens if this doesn't happen like this?
                     //        StartService();
                     //    });
                     //}
@@ -134,21 +134,25 @@ namespace aucobo
 
                 var consumer = new EventingBasicConsumer(rabbitChannel);
                 if (!testConnection) {
-                    // todo: check this and implement event
-                    consumer.Received += (s, e) => MessageHandlerFactory.GetMessageHandler.HandleRabbitMessage(s, e);  //Consumer_Received; 
+                    // still_todo: check this and implement event
+                    consumer.Received += (s, e) =>
+                    {
+                        MessageHandlerFactory.GetMessageHandler.HandleRabbitMessage(s, e); // we handle the message
+                        rabbitChannel.BasicAck(e.DeliveryTag, false); // we acknowledge that the message was received
+                    };
                 }
                 var consumerTag = string.Empty;
-                // todo: figure out the logic to send appropriate tag (just check values)
+                // still_todo: figure out the logic to send appropriate tag (just check values)
                 switch (Xamarin.Forms.Device.RuntimePlatform)
                 {
-                    case Xamarin.Forms.Device.iOS:
-                        consumerTag = "windows smartwatch";
+                    case Xamarin.Forms.Device.iOS:// still_todo: check if it's iPhone or iOS, maybe?
+                        consumerTag = "iOS device";
                         break;
                     case Xamarin.Forms.Device.Android:
-                        consumerTag = "android ";// todo: implement helper + (Helper.IsSmartphone ? "phone" : "watch");
+                        consumerTag = "Android device";// still_todo: implement helper + (Helper.IsSmartphone ? "phone" : "watch");
                         break;
                     case Xamarin.Forms.Device.UWP:
-                        consumerTag = "iPhone"; // todo: check if it's iPhone or iOS, maybe?
+                        consumerTag = "UWP device"; 
                         break;
                 }
 
@@ -162,12 +166,12 @@ namespace aucobo
                     return true;
                 }
 
-                // todo: implement if needed
+                // still_todo: implement if needed
                 //Logger.Debug("RabbitMQ connect success");
             }
             catch (Exception ex)
             {
-                // todo: implement if needed
+                // still_todo: implement if needed
                 //Logger.Debug("RabbitMQ connect error: " + ex.Message);
                 StopService();
                 return false;
@@ -180,7 +184,7 @@ namespace aucobo
         {
             try
             {
-                if (IsConnected) // TODO should this also work when charging / not connected?
+                if (IsConnected) // still_TODO should this also work when charging / not connected?
                 {
                     var props = rabbitChannel.CreateBasicProperties();
                     props.Expiration = TimeSpan.FromMinutes(5).TotalMilliseconds.ToString();
@@ -192,15 +196,15 @@ namespace aucobo
                         { "deviceId", Settings.Smartwatch.ID },
                     };
 
-                    //todo: implement if needed
-                   // Helper.LogDebug("Sending message to rabbit: " + json);
+                    //still_todo: implement if needed
+                    // Helper.LogDebug("Sending message to rabbit: " + json);
                     rabbitChannel.BasicPublish(exchange, routingKey ?? $"{actionType}.{Settings.Smartwatch.Owner.ID}", props, Encoding.UTF8.GetBytes(json));
                     return true;
                 }
             }
             catch (Exception e)
             {
-                //todo: implement if needed
+                //still_todo: implement if needed
                 //Logger.Error("RabbitMQHelper.SendMessage: " + e);
             }
             return false;
@@ -221,7 +225,7 @@ namespace aucobo
                             return;
                         }
 #endif
-                if (IsConnected) // TODO should this also work when charging / not connected?
+                if (IsConnected) // still_TODO should this also work when charging / not connected?
                 {
                     var props = rabbitChannel.CreateBasicProperties();
                     props.Expiration = TimeSpan.FromMinutes(1).TotalMilliseconds.ToString();
@@ -240,10 +244,10 @@ namespace aucobo
             }
             catch (Exception e) 
             {
-                //todo: implement if needed
+                //still_todo: implement if needed
                 //Logger.Error("RabbitMQHelper.SendMedia: " + e); 
             }
-            //todo: implement if needed
+            //still_todo: implement if needed
             //Helper.ShowToast("Sending audio message failed");
         }
 
@@ -252,7 +256,7 @@ namespace aucobo
             try
             {
                 /*
-                //todo: check if needed and implement?
+                //still_todo: check if needed and implement?
 #if WINDOWS_UWP
                         if (Helper.IsForegroundApp)
                         {
@@ -265,7 +269,7 @@ namespace aucobo
                         }
 #endif
                 */
-                if (IsConnected) // TODO should this also work when charging / not connected?
+                if (IsConnected) // still_TODO should this also work when charging / not connected?
                 {
                     var props = rabbitChannel.CreateBasicProperties();
                     props.Expiration = TimeSpan.FromMinutes(1).TotalMilliseconds.ToString();
@@ -365,7 +369,7 @@ namespace aucobo
 
 
 
-        //todo: Implement this properly when you manage login and getting messages
+        //still_todo: Implement this properly when you manage login and getting messages
 
 
         /*

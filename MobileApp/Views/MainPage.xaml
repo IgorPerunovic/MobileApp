@@ -12,32 +12,8 @@
 
     <TabbedPage.ItemTemplate>
         <DataTemplate>
-            <ContentPage Title="{Binding Title}" BackgroundColor="{Binding BackgroundColor}" />
+            <views:AucoboTab Title="{Binding Title}" BackgroundColor="{Binding BackgroundColor}" Content ="{Binding Content}" Padding="10"/>
         </DataTemplate>
     </TabbedPage.ItemTemplate>
-
-    <!--<TabbedPage.Children>
-        <NavigationPage Title="Browse">
-            <NavigationPage.Icon>
-                <OnPlatform x:TypeArguments="FileImageSource">
-                    <On Platform="iOS" Value="tab_feed.png"/>
-                </OnPlatform>
-            </NavigationPage.Icon>
-            <x:Arguments>
-                <views:ItemsPage />
-            </x:Arguments>
-        </NavigationPage>
-        
-        <NavigationPage Title="About">
-            <NavigationPage.Icon>
-                <OnPlatform x:TypeArguments="FileImageSource">
-                    <On Platform="iOS" Value="tab_about.png"/>
-                </OnPlatform>
-            </NavigationPage.Icon>
-            <x:Arguments>
-                <views:AboutPage />
-            </x:Arguments>
-        </NavigationPage>
-    </TabbedPage.Children>-->
-    
+ 
 </TabbedPage>

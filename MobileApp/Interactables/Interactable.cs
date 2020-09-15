@@ -10,9 +10,9 @@ namespace MobileApp.Interactables
     {
         private readonly int id;
 
-        // todo: add parameters
+        // still_todo: add parameters
 
-        // TODO: add next steps
+        // still_TODO: add next steps
 
         public Interactable()
         {

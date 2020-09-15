@@ -97,25 +97,26 @@ namespace MobileApp.Services
         #region constants
         const string smartwatchKey = "Smart_Watch_Key";
         const string configurationKey = "Configuration_Key";
+        const string interactablesKey = "Interactables_Key"; 
         #endregion
 
         // these methods are used as presented to get and save specific values that we use in the app
         #region externally available methods
- 
+
 
 
         public static Smartwatch Smartwatch 
         { 
             get 
             {
-                var smartWatchJSON = Settings.getString(smartwatchKey);
+                var smartWatchJSON = getString(smartwatchKey);
                 var result = JsonConvert.DeserializeObject<Smartwatch>(smartWatchJSON);
                 return result;
             }
             set 
             {
                 if (!(value is Smartwatch)) { return; }
-                Settings.saveString(smartwatchKey, JsonConvert.SerializeObject(value));
+                saveString(smartwatchKey, JsonConvert.SerializeObject(value));
                 
             }
             
@@ -126,20 +127,39 @@ namespace MobileApp.Services
         {
             get
             {
-                var configurationJson = Settings.getString(configurationKey);
+                var configurationJson = getString(configurationKey);
                 var result = JsonConvert.DeserializeObject<ServerConfiguration>(configurationJson);
                 return result;
             }
             set
             {
                 if (!(value is ServerConfiguration)) { return; }
-                Settings.saveString(configurationKey, JsonConvert.SerializeObject(value));
+                saveString(configurationKey, JsonConvert.SerializeObject(value));
             }
         }
 
-        // todo: implement JWT class
+        public static List<TabModel> Tabs => Smartwatch.Owner.Tabs?? DefaultTabs;
+        // still_todo: implement JWT class
         //public static JWT OauthToken { get; set; }
 
+        private static List<TabModel> DefaultTabs => new List<TabModel>() { new TabModel() { Id = "1", Title = "Tab1!!" }, new TabModel() { Id = "2", Title = "Tab2!!" } };
+
+
+        public static List<Message> Interactables
+        {
+            get
+            {
+                var interactables = getString(interactablesKey);
+                var result = JsonConvert.DeserializeObject<List<Message>>(interactables);
+                return result;
+            }
+            set
+            {
+                if (!(value is List<Message>)) { return; }
+                saveString(interactablesKey, JsonConvert.SerializeObject(value));
+            }
+
+        }
         #endregion
     }
 }

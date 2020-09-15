@@ -26,32 +26,32 @@ namespace MobileApp.Models
             };
         }
 
-       //todo: see if we should implement this and how
-//#if WINDOWS_UWP
-//        bool isPlaying;
-//        public MediaElement MediaElement;
-//        public string PlayIcon => isPlaying ? "" : "";
-//        public bool CanPlay { get; set; }
+        //still_todo: see if we should implement this and how
+        //#if WINDOWS_UWP
+        //        bool isPlaying;
+        //        public MediaElement MediaElement;
+        //        public string PlayIcon => isPlaying ? "" : "";
+        //        public bool CanPlay { get; set; }
 
-//        public void MediaEnded(object sender, RoutedEventArgs e)
-//        {
-//            isPlaying = false;
-//            NotifyChanged(nameof(PlayIcon));
-//        }
+        //        public void MediaEnded(object sender, RoutedEventArgs e)
+        //        {
+        //            isPlaying = false;
+        //            NotifyChanged(nameof(PlayIcon));
+        //        }
 
-//        public void PlayMedia(object sender, RoutedEventArgs e)
-//        {
-//            if (isPlaying) { MediaElement.Stop(); }
-//            else { MediaElement.Play(); }
-//            isPlaying = !isPlaying;
-//            NotifyChanged(nameof(PlayIcon));
-//        }
+        //        public void PlayMedia(object sender, RoutedEventArgs e)
+        //        {
+        //            if (isPlaying) { MediaElement.Stop(); }
+        //            else { MediaElement.Play(); }
+        //            isPlaying = !isPlaying;
+        //            NotifyChanged(nameof(PlayIcon));
+        //        }
 
-//        public void MediaOpened(object sender, RoutedEventArgs e)
-//        {
-//            CanPlay = true;
-//            NotifyChanged(nameof(CanPlay));
-//        }
-//#endif
+        //        public void MediaOpened(object sender, RoutedEventArgs e)
+        //        {
+        //            CanPlay = true;
+        //            NotifyChanged(nameof(CanPlay));
+        //        }
+        //#endif
     }
 }

@@ -17,7 +17,7 @@ namespace MobileApp.Models
         public Dictionary<string, string> MetaTags { get; set; } = new Dictionary<string, string>()
         {
             ["eventOriginId"] = Guid.NewGuid().ToString(),
-            ["created"] = Helper.CurrentTimeMillis.ToString(),
+            ["created"] = Helper.CurrentTimeMillis.ToString(), // still_todo: check this, should it be current time or what we get?
         };
 
         [JsonIgnore]
@@ -27,12 +27,23 @@ namespace MobileApp.Models
             set => MetaTags["eventOriginId"] = value;
         }
 
+
+        [JsonProperty("created")]
+        public long CreatedUnix { get; set; }
+
         [JsonIgnore]
         public DateTimeOffset Created
         {
-            get => DateTimeOffset.FromUnixTimeMilliseconds(long.Parse(MetaTags["created"]));
-            set => MetaTags["created"] = value.ToUnixTimeMilliseconds().ToString();
+            get => DateTimeOffset.FromUnixTimeMilliseconds(CreatedUnix);
+            set => CreatedUnix = value.ToUnixTimeMilliseconds();
         }
+        // still_todo: check Created in meta tags or just value in JSON?
+        //[JsonIgnore]
+        //public DateTimeOffset Created
+        //{
+        //    get => DateTimeOffset.FromUnixTimeMilliseconds(long.Parse(MetaTags["created"]));
+        //    set => MetaTags["created"] = value.ToUnixTimeMilliseconds().ToString();
+        //}
 
         [JsonProperty("_id")]
         public string ID { get; set; } = Guid.NewGuid().ToString();

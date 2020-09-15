@@ -27,8 +27,8 @@ namespace MobileApp
         {
             Debug.WriteLine("app started");
 
-            //var config = await Helper.TryGetNewConfiguration(Constants.QR);
-            //RabbitMQService.StartService();
+           // var config = await Helper.TryGetNewConfiguration(Constants.QR);
+            RabbitMQService.StartService();
 
             //await Task.Delay(5000);
             //CrossToastPopUp.Current.ShowToastMessage("Message");

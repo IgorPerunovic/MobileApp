@@ -5,7 +5,7 @@ namespace aucobo
 {
     public class ServerConfiguration
     {
-        //maybe not needed? todo: check
+        //maybe not needed? still_todo: check
         //[JsonProperty("settings")]
         //public List<Setting> Settings { get; set; }
 

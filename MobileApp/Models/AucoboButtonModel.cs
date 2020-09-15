@@ -15,7 +15,7 @@ namespace MobileApp.Models
             ? "Walkie Talkie" 
             : 
                 (Text == Constants.PICTURE_COMMUNICATION_BUTTON_ID 
-                ? "Localized String here"// todo: implement localization Helper.GetString("SendPictureMessage") 
+                ? "Localized String here"// still_todo: implement localization Helper.GetString("SendPictureMessage") 
                 : Text);
         
     }

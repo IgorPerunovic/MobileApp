@@ -20,7 +20,7 @@ namespace MobileApp.Views
             this.BindingContext = bc;
             //this.ItemsSource = bc.Tabs;
 
-            changeTabs();
+       //     changeTabs();
         }
 
         private async void changeTabs() {

@@ -23,7 +23,7 @@ namespace MobileApp.Models
             Owner = new User() { Name = message.SenderOwnerName }
         };
 
-        //TODO: implement this as needed
+        //still_TODO: implement this as needed
         public static Device FromPictureMessage(PictureMessage message) => new Device()
         {
             ID = message.SenderDeviceId,
@@ -33,7 +33,7 @@ namespace MobileApp.Models
 
     public class Smartwatch : Device
     {
-        //TODO: implement this model to represent button data
+        //still_TODO: implement this model to represent button data
         [JsonProperty("buttons")]
         public List<AucoboButtonModel> Buttons { get; set; }
 

@@ -1,4 +1,5 @@
-﻿using Newtonsoft.Json;
+﻿using MobileApp.Models;
+using Newtonsoft.Json;
 using System.Collections.Generic;
 
 namespace aucobo
@@ -22,6 +23,10 @@ namespace aucobo
 
         [JsonProperty("metaTags")]
         public Dictionary<string, object> MetaTags { get; set; }
+
+        [JsonProperty("tabs")]
+        public List<TabModel> Tabs { get; set; }
+
 
         [JsonIgnore]
         public string FullName
